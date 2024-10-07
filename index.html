@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вакансии для разработчиков игр</title>
+    <link rel="stylesheet" href="styles.css"> <!-- Подключение CSS для стилизации -->
+</head>
+<body>
+    <header>
+        <h1>Вакансии для разработчиков игр</h1>
+        <nav>
+            <ul>
+                <li><a href="#add-resume">Добавить резюме</a></li>
+                <li><a href="#resumes">Резюме</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section id="add-resume">
+            <h2>Добавить резюме</h2>
+            <form id="resumeForm">
+                <label for="name">Имя:</label>
+                <input type="text" id="name" name="name" required>
+
+                <label for="skills">Навыки:</label>
+                <textarea id="skills" name="skills" required></textarea>
+
+                <label for="experience">Опыт работы:</label>
+                <textarea id="experience" name="experience" required></textarea>
+
+                <label for="education">Образование:</label>
+                <input type="text" id="education" name="education" required>
+
+                <button type="submit">Добавить резюме</button>
+            </form>
+        </section>
+
+        <section id="resumes">
+            <h2>Резюме</h2>
+            <div id="resumeList">
+                <div class="resume-item">
+                    <h3>Иван Иванов</h3>
+                    <p><strong>Навыки:</strong> Unity, C#, разработка 2D игр, анимация персонажей</p>
+                    <p><strong>Опыт работы:</strong> 2 года разработки мобильных игр в Unity</p>
+                    <p><strong>Образование:</strong> Бакалавр в области информационных технологий</p>
+                </div>
+                <div class="resume-item">
+                    <h3>Ольга Петрова</h3>
+                    <p><strong>Навыки:</strong> Unreal Engine, Blueprint, 3D моделирование, текстурирование</p>
+                    <p><strong>Опыт работы:</strong> 3 года в разработке 3D игр, опыт создания игровых ассетов</p>
+                    <p><strong>Образование:</strong> Магистр компьютерной графики</p>
+                </div>
+                <div class="resume-item">
+                    <h3>Максим Смирнов</h3>
+                    <p><strong>Навыки:</strong> C++, физика игр, искусственный интеллект</p>
+                    <p><strong>Опыт работы:</strong> 5 лет разработки в области ИИ для игр</p>
+                    <p><strong>Образование:</strong> Магистр прикладной математики</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 Вакансии для разработчиков игр</p>
+    </footer>
+
+    <script>
+        document.getElementById('resumeForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+            const name = document.getElementById('name').value;
+            const skills = document.getElementById('skills').value;
+            const experience = document.getElementById('experience').value;
+            const education = document.getElementById('education').value;
+
+            const resumeItem = document.createElement('div');
+            resumeItem.classList.add('resume-item');
+            resumeItem.innerHTML = `<h3>${name}</h3>
+                                    <p><strong>Навыки:</strong> ${skills}</p>
+                                    <p><strong>Опыт работы:</strong> ${experience}</p>
+                                    <p><strong>Образование:</strong> ${education}</p>`;
+            document.getElementById('resumeList').appendChild(resumeItem);
+
+            document.getElementById('resumeForm').reset(); // Сброс формы после добавления
+        });
+    </script>
+</body>
+</html>
