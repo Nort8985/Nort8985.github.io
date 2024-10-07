@@ -107,12 +107,20 @@
       <input type="text" id="name" placeholder="Имя разработчика" required>
       <input type="text" id="skills" placeholder="Навыки (например, Unity, JavaScript)" required>
       <input type="text" id="experience" placeholder="Опыт (например, 2 года)" required>
-      <input type="text" id="contact" placeholder="Номер телефона или Email" required>
+      <input type="text" id="contact" placeholder="Номер телефона или Email (необязательно)">
       <button type="submit">Добавить вакансию</button>
     </form>
 
     <h2>Список вакансий</h2>
     <div id="vacancyList"></div>
+
+    <div id="authContainer" style="display: flex; flex-direction: column; gap: 15px;">
+      <input type="email" id="email" placeholder="Email" required>
+      <input type="password" id="password" placeholder="Пароль" required>
+      <button id="registerButton">Регистрация</button>
+      <button id="loginButton">Вход</button>
+      <button id="logoutButton" style="display: none;">Выход</button>
+    </div>
   </div>
 
   <footer>
@@ -122,7 +130,8 @@
   <script type="module">
     // Импорт функций из Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 
     // Конфигурация Firebase
     const firebaseConfig = {
@@ -138,6 +147,7 @@
     // Инициализация Firebase
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app); // Инициализация Firestore
+    const auth = getAuth(); // Инициализация Auth
 
     // Функция для добавления данных в Firestore
     async function addVacancy(name, skills, experience, contact) {
@@ -146,7 +156,8 @@
           name: name,
           skills: skills,
           experience: experience,
-          contact: contact
+          contact: contact,
+          createdBy: auth.currentUser ? auth.currentUser.uid : null // Запоминаем ID пользователя
         });
         console.log("Вакансия добавлена с ID: ", docRef.id);
         loadVacancies(); // Обновляем список вакансий
@@ -168,10 +179,51 @@
           <strong>Имя:</strong> ${vacancyData.name} <br>
           <strong>Навыки:</strong> ${vacancyData.skills} <br>
           <strong>Опыт:</strong> ${vacancyData.experience} <br>
-          <button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>
+          ${vacancyData.contact ? `<button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>` : ""}
         `;
+        
+        // Если пользователь авторизован и это его вакансия, добавляем кнопки редактирования и удаления
+        if (auth.currentUser && vacancyData.createdBy === auth.currentUser.uid) {
+          vacancyDiv.innerHTML += `
+            <button onclick="editVacancy('${doc.id}', '${vacancyData.name}', '${vacancyData.skills}', '${vacancyData.experience}', '${vacancyData.contact}')">Редактировать</button>
+            <button onclick="deleteVacancy('${doc.id}')">Удалить</button>
+          `;
+        }
         vacancyList.appendChild(vacancyDiv);
       });
+    }
+
+    // Функция для редактирования вакансии
+    window.editVacancy = function(id, name, skills, experience, contact) {
+      document.getElementById("name").value = name;
+      document.getElementById("skills").value = skills;
+      document.getElementById("experience").value = experience;
+      document.getElementById("contact").value = contact || '';
+      document.getElementById("vacancyForm").dataset.editingId = id; // Сохраняем ID для обновления
+    }
+
+    // Функция для обновления вакансии
+    async function updateVacancy(id, name, skills, experience, contact) {
+      const vacancyRef = doc(db, "vacancies", id);
+      await updateDoc(vacancyRef, {
+        name: name,
+        skills: skills,
+        experience: experience,
+        contact: contact
+      });
+      loadVacancies(); // Обновляем список вакансий
+    }
+
+    // Функция для удаления вакансии
+    window.deleteVacancy = async function(id) {
+      const vacancyRef = doc(db, "vacancies", id);
+      try {
+        await deleteDoc(vacancyRef);
+        console.log("Вакансия удалена");
+        loadVacancies(); // Обновляем список вакансий
+      } catch (e) {
+        console.error("Ошибка при удалении вакансии: ", e);
+      }
     }
 
     // Функция для отображения контакта при нажатии на кнопку
@@ -182,16 +234,84 @@
     // Загружаем вакансии при загрузке страницы
     window.onload = loadVacancies;
 
-    // Обработчик формы для добавления новой вакансии
-    document.getElementById("vacancyForm").addEventListener("submit", function(event) {
+    // Обработчик формы для добавления или редактирования вакансии
+    document.getElementById("vacancyForm").addEventListener("submit", async function(event) {
       event.preventDefault(); // Предотвращаем отправку формы
       const name = document.getElementById("name").value;
       const skills = document.getElementById("skills").value;
       const experience = document.getElementById("experience").value;
       const contact = document.getElementById("contact").value;
-      addVacancy(name, skills, experience, contact); // Добавляем вакансию в Firestore
+
+      const editingId = document.getElementById("vacancyForm").dataset.editingId;
+      
+      if (editingId) {
+        await updateVacancy(editingId, name, skills, experience, contact);
+        delete document.getElementById("vacancyForm").dataset.editingId; // Убираем режим редактирования
+      } else {
+        addVacancy(name, skills, experience, contact); // Добавляем новую вакансию
+      }
+
       document.getElementById("vacancyForm").reset(); // Сбрасываем форму
     });
+
+    // Регистрация пользователя
+    document.getElementById("registerButton").addEventListener("click", async function() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      try {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        console.log("Пользователь зарегистрирован:", userCredential.user);
+        loadVacancies();
+      } catch (e) {
+        console.error("Ошибка при регистрации:", e);
+      }
+    });
+
+    // Вход пользователя
+    document.getElementById("loginButton").addEventListener("click", async function() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      try {
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log("Пользователь вошел:", userCredential.user);
+        loadVacancies();
+        document.getElementById("logoutButton").style.display = 'block';
+        document.getElementById("loginButton").style.display = 'none';
+        document.getElementById("registerButton").style.display = 'none';
+      } catch (e) {
+        console.error("Ошибка при входе:", e);
+      }
+    });
+
+    // Выход пользователя
+    document.getElementById("logoutButton").addEventListener("click", async function() {
+      try {
+        await signOut(auth);
+        console.log("Пользователь вышел");
+        loadVacancies();
+        document.getElementById("logoutButton").style.display = 'none';
+        document.getElementById("loginButton").style.display = 'block';
+        document.getElementById("registerButton").style.display = 'block';
+      } catch (e) {
+        console.error("Ошибка при выходе:", e);
+      }
+    });
+
+    // Отслеживание состояния пользователя (авторизован или нет)
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Пользователь вошел:", user);
+        document.getElementById("logoutButton").style.display = 'block';
+        document.getElementById("loginButton").style.display = 'none';
+        document.getElementById("registerButton").style.display = 'none';
+      } else {
+        console.log("Пользователь не авторизован");
+        document.getElementById("logoutButton").style.display = 'none';
+        document.getElementById("loginButton").style.display = 'block';
+        document.getElementById("registerButton").style.display = 'block';
+      }
+    });
+
   </script>
 
 </body>
