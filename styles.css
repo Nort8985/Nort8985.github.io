@@ -1,49 +1,131 @@
+/* Основные стили страницы */
 body {
-    font-family: Arial, sans-serif;
-    margin: 0;
-    padding: 0;
-    background-color: #f4f4f4;
+  font-family: 'Poppins', sans-serif; /* Модный шрифт */
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(135deg, #f9f9f9, #e0e7ff); /* Градиентный фон */
+  color: #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
 }
 
-header {
-    background: #007bff;
-    color: white;
-    padding: 10px 0;
-    text-align: center;
+/* Заголовки */
+h1, h2 {
+  font-family: 'Poppins', sans-serif; /* Современный шрифт */
+  color: #34495e;
+  text-align: center;
 }
 
-nav ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-nav ul li {
-    display: inline;
-    margin: 0 15px;
-}
-
-main {
-    padding: 20px;
+h1 {
+  font-size: 2.5rem;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
 }
 
 h2 {
-    margin-top: 20px;
+  font-size: 1.8rem;
+  margin-bottom: 20px;
 }
 
+/* Контейнер */
+.container {
+  max-width: 800px;
+  background-color: white;
+  border-radius: 20px;
+  padding: 30px;
+  box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.15); /* Тень для объема */
+  margin: 20px auto;
+  transition: transform 0.3s ease;
+}
+
+.container:hover {
+  transform: translateY(-10px); /* Эффект подъема контейнера при наведении */
+}
+
+/* Стили формы */
 form {
-    background: white;
-    padding: 20px;
-    border-radius: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 30px;
 }
 
-form label {
-    display: block;
-    margin: 10px 0 5px;
+input {
+  padding: 15px;
+  border: 2px solid #34495e;
+  border-radius: 10px;
+  font-size: 16px;
+  background-color: #f4f6f9;
+  transition: border 0.3s ease, box-shadow 0.3s ease;
 }
 
-.resume-item {
-    background: white;
-    margin: 10px 0;
-    padding: 10px;
-    border-radius: 5px;
+input:focus {
+  border-color: #4a90e2;
+  box-shadow: 0px 5px 15px rgba(74, 144, 226, 0.3);
+}
+
+/* Кнопки */
+button {
+  padding: 15px;
+  background-color: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0px 5px 10px rgba(74, 144, 226, 0.2); /* Тень для кнопки */
+}
+
+button:hover {
+  background-color: #357abd;
+  transform: scale(1.05); /* Легкое увеличение кнопки при наведении */
+}
+
+/* Стили вакансий */
+.vacancy {
+  background-color: #f9f9f9;
+  border-left: 5px solid #4a90e2;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  box-shadow: 0px 5px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vacancy:hover {
+  transform: translateY(-5px);
+  box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.15); /* Более сильная тень при наведении */
+}
+
+.vacancy strong {
+  font-size: 1.2rem;
+  color: #34495e;
+}
+
+.vacancy button {
+  margin-top: 20px;
+  width: 100%;
+  background-color: #ff6f61;
+  font-size: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+  box-shadow: 0px 5px 10px rgba(255, 111, 97, 0.2); /* Тень для кнопки проверки */
+}
+
+.vacancy button:hover {
+  background-color: #d95445;
+  transform: scale(1.05);
+}
+
+/* Футер */
+footer {
+  margin-top: 30px;
+  color: #888;
+  font-size: 14px;
+  text-align: center;
 }

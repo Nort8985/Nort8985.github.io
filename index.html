@@ -3,52 +3,121 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Вакансии разработчиков игр</title>
+  <title>Game Developer Jobs</title>
   <style>
+    /* Основные стили страницы */
     body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f2f5;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
     }
+
+    h1, h2 {
+      color: #4a90e2;
+    }
+
+    /* Контейнер для основной информации */
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+    }
+
     form {
-      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      margin-bottom: 30px;
     }
-    input, textarea {
-      display: block;
-      margin: 10px 0;
+
+    input {
       padding: 10px;
-      width: 300px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 16px;
     }
+
     button {
-      padding: 10px 20px;
-      background-color: #4CAF50;
+      padding: 12px;
+      background-color: #4a90e2;
       color: white;
       border: none;
+      border-radius: 5px;
+      font-size: 16px;
       cursor: pointer;
+      transition: background-color 0.3s ease;
     }
+
     button:hover {
-      background-color: #45a049;
+      background-color: #357ABD;
     }
+
     .vacancy {
-      border: 1px solid #ccc;
-      padding: 10px;
-      margin: 10px 0;
+      background: #f9f9f9;
+      border-left: 4px solid #4a90e2;
+      padding: 15px;
+      border-radius: 5px;
+      margin-bottom: 15px;
+      position: relative;
+      text-align: left;
+    }
+
+    .vacancy strong {
+      font-size: 16px;
+      color: #333;
+    }
+
+    .vacancy button {
+      display: block;
+      margin-top: 10px;
+      background-color: #ff6f61;
+      width: 100%;
+      text-align: center;
+    }
+
+    .vacancy button:hover {
+      background-color: #d95445;
+    }
+
+    footer {
+      margin-top: 30px;
+      color: #888;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
 
-  <h1>Добавить вакансию</h1>
+  <div class="container">
+    <h1>Добавить вакансию разработчика игр</h1>
 
-  <!-- Форма для добавления новой вакансии -->
-  <form id="vacancyForm">
-    <input type="text" id="name" placeholder="Имя разработчика" required>
-    <input type="text" id="skills" placeholder="Навыки (например, Unity, JavaScript)" required>
-    <input type="text" id="experience" placeholder="Опыт (например, 2 года)" required>
-    <button type="submit">Добавить вакансию</button>
-  </form>
+    <!-- Форма для добавления новой вакансии -->
+    <form id="vacancyForm">
+      <input type="text" id="name" placeholder="Имя разработчика" required>
+      <input type="text" id="skills" placeholder="Навыки (например, Unity, JavaScript)" required>
+      <input type="text" id="experience" placeholder="Опыт (например, 2 года)" required>
+      <input type="text" id="contact" placeholder="Номер телефона или Email" required>
+      <button type="submit">Добавить вакансию</button>
+    </form>
 
-  <h2>Список вакансий</h2>
-  <div id="vacancyList"></div>
+    <h2>Список вакансий</h2>
+    <div id="vacancyList"></div>
+  </div>
+
+  <footer>
+    Game Developer Jobs © 2024
+  </footer>
 
   <script type="module">
     // Импорт функций из Firebase SDK
@@ -71,12 +140,13 @@
     const db = getFirestore(app); // Инициализация Firestore
 
     // Функция для добавления данных в Firestore
-    async function addVacancy(name, skills, experience) {
+    async function addVacancy(name, skills, experience, contact) {
       try {
         const docRef = await addDoc(collection(db, "vacancies"), {
           name: name,
           skills: skills,
-          experience: experience
+          experience: experience,
+          contact: contact
         });
         console.log("Вакансия добавлена с ID: ", docRef.id);
         loadVacancies(); // Обновляем список вакансий
@@ -97,10 +167,16 @@
         vacancyDiv.innerHTML = `
           <strong>Имя:</strong> ${vacancyData.name} <br>
           <strong>Навыки:</strong> ${vacancyData.skills} <br>
-          <strong>Опыт:</strong> ${vacancyData.experience}
+          <strong>Опыт:</strong> ${vacancyData.experience} <br>
+          <button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>
         `;
         vacancyList.appendChild(vacancyDiv);
       });
+    }
+
+    // Функция для отображения контакта при нажатии на кнопку
+    window.showContact = function(contact) {
+      alert("Контакт: " + contact); // Всплывающее окно с контактными данными
     }
 
     // Загружаем вакансии при загрузке страницы
@@ -112,7 +188,8 @@
       const name = document.getElementById("name").value;
       const skills = document.getElementById("skills").value;
       const experience = document.getElementById("experience").value;
-      addVacancy(name, skills, experience); // Добавляем вакансию в Firestore
+      const contact = document.getElementById("contact").value;
+      addVacancy(name, skills, experience, contact); // Добавляем вакансию в Firestore
       document.getElementById("vacancyForm").reset(); // Сбрасываем форму
     });
   </script>
