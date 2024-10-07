@@ -130,7 +130,7 @@
   <script type="module">
     // Импорт функций из Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 
     // Конфигурация Firebase
@@ -148,6 +148,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app); // Инициализация Firestore
     const auth = getAuth(); // Инициализация Auth
+
+    // Флаг для проверки, является ли пользователь администратором
+    window.isAdmin = false;
 
     // Функция для добавления данных в Firestore
     async function addVacancy(name, skills, experience, contact) {
@@ -182,8 +185,8 @@
           ${vacancyData.contact ? `<button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>` : ""}
         `;
         
-        // Если пользователь авторизован и это его вакансия, добавляем кнопки редактирования и удаления
-        if (auth.currentUser && vacancyData.createdBy === auth.currentUser.uid) {
+        // Если пользователь авторизован и это его вакансия или он администратор, добавляем кнопки редактирования и удаления
+        if (auth.currentUser && (vacancyData.createdBy === auth.currentUser.uid || window.isAdmin)) {
           vacancyDiv.innerHTML += `
             <button onclick="editVacancy('${doc.id}', '${vacancyData.name}', '${vacancyData.skills}', '${vacancyData.experience}', '${vacancyData.contact}')">Редактировать</button>
             <button onclick="deleteVacancy('${doc.id}')">Удалить</button>
@@ -221,98 +224,97 @@
         await deleteDoc(vacancyRef);
         console.log("Вакансия удалена");
         loadVacancies(); // Обновляем список вакансий
-      } catch (e) {
-        console.error("Ошибка при удалении вакансии: ", e);
+      } catch (error) {
+        console.error("Ошибка при удалении вакансии: ", error);
       }
     }
 
-    // Функция для отображения контакта при нажатии на кнопку
+    // Функция для отображения контакта
     window.showContact = function(contact) {
-      alert("Контакт: " + contact); // Всплывающее окно с контактными данными
+      alert("Контакт: " + contact);
     }
 
-    // Загружаем вакансии при загрузке страницы
-    window.onload = loadVacancies;
+    // Отслеживание изменения состояния аутентификации
+    onAuthStateChanged(auth, (user) => {
+      const logoutButton = document.getElementById("logoutButton");
+      const authContainer = document.getElementById("authContainer");
+      if (user) {
+        console.log("Пользователь вошел: ", user.email);
+        // Проверяем, является ли пользователь администратором
+        if (user.email === "assasin22052007@gmail.com") {
+          window.isAdmin = true;
+          console.log("Пользователь является администратором");
+        } else {
+          window.isAdmin = false;
+        }
+        authContainer.style.display = "block";
+        logoutButton.style.display = "block";
+        loadVacancies(); // Загружаем вакансии после входа
+      } else {
+        console.log("Пользователь вышел");
+        authContainer.style.display = "flex";
+        logoutButton.style.display = "none";
+        window.isAdmin = false; // Сбрасываем флаг администратора при выходе
+        loadVacancies(); // Загружаем вакансии в неаутентифицированном режиме
+      }
+    });
 
-    // Обработчик формы для добавления или редактирования вакансии
-    document.getElementById("vacancyForm").addEventListener("submit", async function(event) {
-      event.preventDefault(); // Предотвращаем отправку формы
+    // Обработка формы для добавления вакансии
+    document.getElementById("vacancyForm").addEventListener("submit", async function (event) {
+      event.preventDefault();
       const name = document.getElementById("name").value;
       const skills = document.getElementById("skills").value;
       const experience = document.getElementById("experience").value;
       const contact = document.getElementById("contact").value;
 
-      const editingId = document.getElementById("vacancyForm").dataset.editingId;
-      
-      if (editingId) {
-        await updateVacancy(editingId, name, skills, experience, contact);
-        delete document.getElementById("vacancyForm").dataset.editingId; // Убираем режим редактирования
+      // Если редактируем вакансию
+      if (this.dataset.editingId) {
+        await updateVacancy(this.dataset.editingId, name, skills, experience, contact);
+        delete this.dataset.editingId; // Очищаем флаг редактирования
       } else {
-        addVacancy(name, skills, experience, contact); // Добавляем новую вакансию
+        await addVacancy(name, skills, experience, contact);
       }
 
-      document.getElementById("vacancyForm").reset(); // Сбрасываем форму
+      // Очищаем форму после добавления или обновления
+      this.reset();
     });
 
-    // Регистрация пользователя
-    document.getElementById("registerButton").addEventListener("click", async function() {
+    // Обработка регистрации пользователя
+    document.getElementById("registerButton").addEventListener("click", async function () {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log("Пользователь зарегистрирован:", userCredential.user);
-        loadVacancies();
-      } catch (e) {
-        console.error("Ошибка при регистрации:", e);
+        await createUserWithEmailAndPassword(auth, email, password);
+        console.log("Регистрация прошла успешно");
+      } catch (error) {
+        console.error("Ошибка при регистрации: ", error);
       }
     });
 
-    // Вход пользователя
-    document.getElementById("loginButton").addEventListener("click", async function() {
+    // Обработка входа пользователя
+    document.getElementById("loginButton").addEventListener("click", async function () {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log("Пользователь вошел:", userCredential.user);
-        loadVacancies();
-        document.getElementById("logoutButton").style.display = 'block';
-        document.getElementById("loginButton").style.display = 'none';
-        document.getElementById("registerButton").style.display = 'none';
-      } catch (e) {
-        console.error("Ошибка при входе:", e);
+        await signInWithEmailAndPassword(auth, email, password);
+        console.log("Вход выполнен успешно");
+      } catch (error) {
+        console.error("Ошибка при входе: ", error);
       }
     });
 
-    // Выход пользователя
-    document.getElementById("logoutButton").addEventListener("click", async function() {
+    // Обработка выхода пользователя
+    document.getElementById("logoutButton").addEventListener("click", async function () {
       try {
         await signOut(auth);
-        console.log("Пользователь вышел");
-        loadVacancies();
-        document.getElementById("logoutButton").style.display = 'none';
-        document.getElementById("loginButton").style.display = 'block';
-        document.getElementById("registerButton").style.display = 'block';
-      } catch (e) {
-        console.error("Ошибка при выходе:", e);
+        console.log("Выход выполнен успешно");
+      } catch (error) {
+        console.error("Ошибка при выходе: ", error);
       }
     });
 
-    // Отслеживание состояния пользователя (авторизован или нет)
-    onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log("Пользователь вошел:", user);
-        document.getElementById("logoutButton").style.display = 'block';
-        document.getElementById("loginButton").style.display = 'none';
-        document.getElementById("registerButton").style.display = 'none';
-      } else {
-        console.log("Пользователь не авторизован");
-        document.getElementById("logoutButton").style.display = 'none';
-        document.getElementById("loginButton").style.display = 'block';
-        document.getElementById("registerButton").style.display = 'block';
-      }
-    });
-
+    // Загружаем вакансии при первой загрузке страницы
+    loadVacancies();
   </script>
-
 </body>
 </html>
