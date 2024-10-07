@@ -1,89 +1,121 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Вакансии для разработчиков игр</title>
-    <link rel="stylesheet" href="styles.css"> <!-- Подключение CSS для стилизации -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Вакансии разработчиков игр</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    form {
+      margin-bottom: 20px;
+    }
+    input, textarea {
+      display: block;
+      margin: 10px 0;
+      padding: 10px;
+      width: 300px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .vacancy {
+      border: 1px solid #ccc;
+      padding: 10px;
+      margin: 10px 0;
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <h1>Вакансии для разработчиков игр</h1>
-        <nav>
-            <ul>
-                <li><a href="#add-resume">Добавить резюме</a></li>
-                <li><a href="#resumes">Резюме</a></li>
-            </ul>
-        </nav>
-    </header>
 
-    <main>
-        <section id="add-resume">
-            <h2>Добавить резюме</h2>
-            <form id="resumeForm">
-                <label for="name">Имя:</label>
-                <input type="text" id="name" name="name" required>
+  <h1>Добавить вакансию</h1>
 
-                <label for="skills">Навыки:</label>
-                <textarea id="skills" name="skills" required></textarea>
+  <!-- Форма для добавления новой вакансии -->
+  <form id="vacancyForm">
+    <input type="text" id="name" placeholder="Имя разработчика" required>
+    <input type="text" id="skills" placeholder="Навыки (например, Unity, JavaScript)" required>
+    <input type="text" id="experience" placeholder="Опыт (например, 2 года)" required>
+    <button type="submit">Добавить вакансию</button>
+  </form>
 
-                <label for="experience">Опыт работы:</label>
-                <textarea id="experience" name="experience" required></textarea>
+  <h2>Список вакансий</h2>
+  <div id="vacancyList"></div>
 
-                <label for="education">Образование:</label>
-                <input type="text" id="education" name="education" required>
+  <script type="module">
+    // Импорт функций из Firebase SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getFirestore, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
 
-                <button type="submit">Добавить резюме</button>
-            </form>
-        </section>
+    // Конфигурация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyCfbzq4dJ9ujYb__vFfN_l5by9ZWwWlCMo",
+      authDomain: "site-2ea5f.firebaseapp.com",
+      projectId: "site-2ea5f",
+      storageBucket: "site-2ea5f.appspot.com",
+      messagingSenderId: "699136563902",
+      appId: "1:699136563902:web:e2c44d57a8ac9540d9dcef",
+      measurementId: "G-XWZSTCPMR7"
+    };
 
-        <section id="resumes">
-            <h2>Резюме</h2>
-            <div id="resumeList">
-                <div class="resume-item">
-                    <h3>Иван Иванов</h3>
-                    <p><strong>Навыки:</strong> Unity, C#, разработка 2D игр, анимация персонажей</p>
-                    <p><strong>Опыт работы:</strong> 2 года разработки мобильных игр в Unity</p>
-                    <p><strong>Образование:</strong> Бакалавр в области информационных технологий</p>
-                </div>
-                <div class="resume-item">
-                    <h3>Ольга Петрова</h3>
-                    <p><strong>Навыки:</strong> Unreal Engine, Blueprint, 3D моделирование, текстурирование</p>
-                    <p><strong>Опыт работы:</strong> 3 года в разработке 3D игр, опыт создания игровых ассетов</p>
-                    <p><strong>Образование:</strong> Магистр компьютерной графики</p>
-                </div>
-                <div class="resume-item">
-                    <h3>Максим Смирнов</h3>
-                    <p><strong>Навыки:</strong> C++, физика игр, искусственный интеллект</p>
-                    <p><strong>Опыт работы:</strong> 5 лет разработки в области ИИ для игр</p>
-                    <p><strong>Образование:</strong> Магистр прикладной математики</p>
-                </div>
-            </div>
-        </section>
-    </main>
+    // Инициализация Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app); // Инициализация Firestore
 
-    <footer>
-        <p>&copy; 2024 Вакансии для разработчиков игр</p>
-    </footer>
-
-    <script>
-        document.getElementById('resumeForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            const name = document.getElementById('name').value;
-            const skills = document.getElementById('skills').value;
-            const experience = document.getElementById('experience').value;
-            const education = document.getElementById('education').value;
-
-            const resumeItem = document.createElement('div');
-            resumeItem.classList.add('resume-item');
-            resumeItem.innerHTML = `<h3>${name}</h3>
-                                    <p><strong>Навыки:</strong> ${skills}</p>
-                                    <p><strong>Опыт работы:</strong> ${experience}</p>
-                                    <p><strong>Образование:</strong> ${education}</p>`;
-            document.getElementById('resumeList').appendChild(resumeItem);
-
-            document.getElementById('resumeForm').reset(); // Сброс формы после добавления
+    // Функция для добавления данных в Firestore
+    async function addVacancy(name, skills, experience) {
+      try {
+        const docRef = await addDoc(collection(db, "vacancies"), {
+          name: name,
+          skills: skills,
+          experience: experience
         });
-    </script>
+        console.log("Вакансия добавлена с ID: ", docRef.id);
+        loadVacancies(); // Обновляем список вакансий
+      } catch (e) {
+        console.error("Ошибка при добавлении вакансии: ", e);
+      }
+    }
+
+    // Функция для получения данных из Firestore
+    async function loadVacancies() {
+      const querySnapshot = await getDocs(collection(db, "vacancies"));
+      const vacancyList = document.getElementById("vacancyList");
+      vacancyList.innerHTML = ''; // Очищаем список вакансий
+      querySnapshot.forEach((doc) => {
+        const vacancyData = doc.data();
+        const vacancyDiv = document.createElement("div");
+        vacancyDiv.classList.add("vacancy");
+        vacancyDiv.innerHTML = `
+          <strong>Имя:</strong> ${vacancyData.name} <br>
+          <strong>Навыки:</strong> ${vacancyData.skills} <br>
+          <strong>Опыт:</strong> ${vacancyData.experience}
+        `;
+        vacancyList.appendChild(vacancyDiv);
+      });
+    }
+
+    // Загружаем вакансии при загрузке страницы
+    window.onload = loadVacancies;
+
+    // Обработчик формы для добавления новой вакансии
+    document.getElementById("vacancyForm").addEventListener("submit", function(event) {
+      event.preventDefault(); // Предотвращаем отправку формы
+      const name = document.getElementById("name").value;
+      const skills = document.getElementById("skills").value;
+      const experience = document.getElementById("experience").value;
+      addVacancy(name, skills, experience); // Добавляем вакансию в Firestore
+      document.getElementById("vacancyForm").reset(); // Сбрасываем форму
+    });
+  </script>
+
 </body>
 </html>
