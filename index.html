@@ -130,7 +130,7 @@
   <script type="module">
     // Импорт функций из Firebase SDK
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, updateDoc, deleteDoc, doc, orderBy, query } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-auth.js";
 
     // Конфигурация Firebase
@@ -149,9 +149,6 @@
     const db = getFirestore(app); // Инициализация Firestore
     const auth = getAuth(); // Инициализация Auth
 
-    // Флаг для проверки, является ли пользователь администратором
-    window.isAdmin = false;
-
     // Функция для добавления данных в Firestore
     async function addVacancy(name, skills, experience, contact) {
       try {
@@ -160,6 +157,7 @@
           skills: skills,
           experience: experience,
           contact: contact,
+          createdAt: new Date(), // Сохраняем текущее время создания вакансии
           createdBy: auth.currentUser ? auth.currentUser.uid : null // Запоминаем ID пользователя
         });
         console.log("Вакансия добавлена с ID: ", docRef.id);
@@ -171,22 +169,25 @@
 
     // Функция для получения данных из Firestore
     async function loadVacancies() {
-      const querySnapshot = await getDocs(collection(db, "vacancies"));
+      const vacancyQuery = query(collection(db, "vacancies"), orderBy("createdAt", "desc")); // Запрос с сортировкой по времени создания
+      const querySnapshot = await getDocs(vacancyQuery);
       const vacancyList = document.getElementById("vacancyList");
       vacancyList.innerHTML = ''; // Очищаем список вакансий
       querySnapshot.forEach((doc) => {
         const vacancyData = doc.data();
         const vacancyDiv = document.createElement("div");
         vacancyDiv.classList.add("vacancy");
+        const creationTime = new Date(vacancyData.createdAt.seconds * 1000).toLocaleString(); // Форматируем время
         vacancyDiv.innerHTML = `
           <strong>Имя:</strong> ${vacancyData.name} <br>
           <strong>Навыки:</strong> ${vacancyData.skills} <br>
           <strong>Опыт:</strong> ${vacancyData.experience} <br>
-          ${vacancyData.contact ? `<button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>` : ""}
+          <strong>Контакт:</strong> ${vacancyData.contact ? `<button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>` : "Нет контакта"} <br>
+          <strong>Создано:</strong> ${creationTime} <br>
         `;
         
-        // Если пользователь авторизован и это его вакансия или он администратор, добавляем кнопки редактирования и удаления
-        if (auth.currentUser && (vacancyData.createdBy === auth.currentUser.uid || window.isAdmin)) {
+        // Если пользователь авторизован и это его вакансия, добавляем кнопки редактирования и удаления
+        if (auth.currentUser && vacancyData.createdBy === auth.currentUser.uid) {
           vacancyDiv.innerHTML += `
             <button onclick="editVacancy('${doc.id}', '${vacancyData.name}', '${vacancyData.skills}', '${vacancyData.experience}', '${vacancyData.contact}')">Редактировать</button>
             <button onclick="deleteVacancy('${doc.id}')">Удалить</button>
@@ -208,13 +209,18 @@
     // Функция для обновления вакансии
     async function updateVacancy(id, name, skills, experience, contact) {
       const vacancyRef = doc(db, "vacancies", id);
-      await updateDoc(vacancyRef, {
-        name: name,
-        skills: skills,
-        experience: experience,
-        contact: contact
-      });
-      loadVacancies(); // Обновляем список вакансий
+      try {
+        await updateDoc(vacancyRef, {
+          name: name,
+          skills: skills,
+          experience: experience,
+          contact: contact
+        });
+        console.log("Вакансия обновлена с ID: ", id);
+        loadVacancies(); // Обновляем список вакансий после обновления
+      } catch (e) {
+        console.error("Ошибка при обновлении вакансии: ", e);
+      }
     }
 
     // Функция для удаления вакансии
@@ -222,10 +228,10 @@
       const vacancyRef = doc(db, "vacancies", id);
       try {
         await deleteDoc(vacancyRef);
-        console.log("Вакансия удалена");
-        loadVacancies(); // Обновляем список вакансий
-      } catch (error) {
-        console.error("Ошибка при удалении вакансии: ", error);
+        console.log("Вакансия удалена с ID: ", id);
+        loadVacancies(); // Обновляем список вакансий после удаления
+      } catch (e) {
+        console.error("Ошибка при удалении вакансии: ", e);
       }
     }
 
@@ -234,87 +240,91 @@
       alert("Контакт: " + contact);
     }
 
-    // Отслеживание изменения состояния аутентификации
-    onAuthStateChanged(auth, (user) => {
-      const logoutButton = document.getElementById("logoutButton");
-      const authContainer = document.getElementById("authContainer");
-      if (user) {
-        console.log("Пользователь вошел: ", user.email);
-        // Проверяем, является ли пользователь администратором
-        if (user.email === "assasin22052007@gmail.com") {
-          window.isAdmin = true;
-          console.log("Пользователь является администратором");
-        } else {
-          window.isAdmin = false;
-        }
-        authContainer.style.display = "block";
-        logoutButton.style.display = "block";
-        loadVacancies(); // Загружаем вакансии после входа
-      } else {
-        console.log("Пользователь вышел");
-        authContainer.style.display = "flex";
-        logoutButton.style.display = "none";
-        window.isAdmin = false; // Сбрасываем флаг администратора при выходе
-        loadVacancies(); // Загружаем вакансии в неаутентифицированном режиме
-      }
-    });
-
-    // Обработка формы для добавления вакансии
-    document.getElementById("vacancyForm").addEventListener("submit", async function (event) {
+    // Обработка формы добавления вакансии
+    document.getElementById("vacancyForm").addEventListener("submit", async function(event) {
       event.preventDefault();
       const name = document.getElementById("name").value;
       const skills = document.getElementById("skills").value;
       const experience = document.getElementById("experience").value;
       const contact = document.getElementById("contact").value;
 
-      // Если редактируем вакансию
-      if (this.dataset.editingId) {
-        await updateVacancy(this.dataset.editingId, name, skills, experience, contact);
-        delete this.dataset.editingId; // Очищаем флаг редактирования
+      const editingId = this.dataset.editingId; // Проверяем, редактируется ли вакансия
+
+      if (editingId) {
+        // Если редактируем, то обновляем существующую вакансию
+        await updateVacancy(editingId, name, skills, experience, contact);
+        delete this.dataset.editingId; // Убираем ID редактируемой вакансии
       } else {
+        // Если не редактируем, то добавляем новую вакансию
         await addVacancy(name, skills, experience, contact);
       }
 
-      // Очищаем форму после добавления или обновления
-      this.reset();
+      // Очищаем форму
+      document.getElementById("name").value = '';
+      document.getElementById("skills").value = '';
+      document.getElementById("experience").value = '';
+      document.getElementById("contact").value = '';
     });
 
     // Обработка регистрации пользователя
-    document.getElementById("registerButton").addEventListener("click", async function () {
+    document.getElementById("registerButton").addEventListener("click", function() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        console.log("Регистрация прошла успешно");
-      } catch (error) {
-        console.error("Ошибка при регистрации: ", error);
-      }
+      createUserWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          console.log("Регистрация прошла успешно:", user.email);
+        })
+        .catch((error) => {
+          console.error("Ошибка регистрации:", error);
+        });
     });
 
     // Обработка входа пользователя
-    document.getElementById("loginButton").addEventListener("click", async function () {
+    document.getElementById("loginButton").addEventListener("click", function() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        console.log("Вход выполнен успешно");
-      } catch (error) {
-        console.error("Ошибка при входе: ", error);
-      }
+      signInWithEmailAndPassword(auth, email, password)
+        .then((userCredential) => {
+          const user = userCredential.user;
+          console.log("Вход выполнен:", user.email);
+          document.getElementById("logoutButton").style.display = "block"; // Показываем кнопку выхода
+          loadVacancies(); // Загружаем вакансии
+        })
+        .catch((error) => {
+          console.error("Ошибка входа:", error);
+        });
     });
 
     // Обработка выхода пользователя
-    document.getElementById("logoutButton").addEventListener("click", async function () {
-      try {
-        await signOut(auth);
-        console.log("Выход выполнен успешно");
-      } catch (error) {
-        console.error("Ошибка при выходе: ", error);
+    document.getElementById("logoutButton").addEventListener("click", function() {
+      signOut(auth)
+        .then(() => {
+          console.log("Пользователь вышел");
+          document.getElementById("logoutButton").style.display = "none"; // Скрываем кнопку выхода
+          loadVacancies(); // Обновляем список вакансий после выхода
+        })
+        .catch((error) => {
+          console.error("Ошибка выхода:", error);
+        });
+    });
+
+    // Автоматическое отслеживание состояния аутентификации
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        console.log("Пользователь авторизован:", user.email);
+        document.getElementById("logoutButton").style.display = "block"; // Показываем кнопку выхода
+      } else {
+        console.log("Пользователь не авторизован");
+        document.getElementById("logoutButton").style.display = "none"; // Скрываем кнопку выхода
       }
     });
 
-    // Загружаем вакансии при первой загрузке страницы
-    loadVacancies();
+    // Загрузка вакансий при загрузке страницы
+    window.addEventListener("load", function() {
+      loadVacancies();
+    });
   </script>
+
 </body>
 </html>
