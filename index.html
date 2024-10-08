@@ -148,6 +148,7 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app); // Инициализация Firestore
     const auth = getAuth(); // Инициализация Auth
+    const ADMIN_EMAIL = "assassin22052007@gmail.com";
 
     // Функция для добавления данных в Firestore
     async function addVacancy(name, skills, experience, contact) {
@@ -168,34 +169,45 @@
     }
 
     // Функция для получения данных из Firestore
-    async function loadVacancies() {
-      const vacancyQuery = query(collection(db, "vacancies"), orderBy("createdAt", "desc")); // Запрос с сортировкой по времени создания
-      const querySnapshot = await getDocs(vacancyQuery);
-      const vacancyList = document.getElementById("vacancyList");
-      vacancyList.innerHTML = ''; // Очищаем список вакансий
-      querySnapshot.forEach((doc) => {
-        const vacancyData = doc.data();
-        const vacancyDiv = document.createElement("div");
-        vacancyDiv.classList.add("vacancy");
-        const creationTime = new Date(vacancyData.createdAt.seconds * 1000).toLocaleString(); // Форматируем время
-        vacancyDiv.innerHTML = `
-          <strong>Имя:</strong> ${vacancyData.name} <br>
-          <strong>Навыки:</strong> ${vacancyData.skills} <br>
-          <strong>Опыт:</strong> ${vacancyData.experience} <br>
-          <strong>Контакт:</strong> ${vacancyData.contact ? `<button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>` : "Нет контакта"} <br>
-          <strong>Создано:</strong> ${creationTime} <br>
+    // Функция для получения данных из Firestore с сортировкой по дате создания
+async function loadVacancies() {
+  const vacancyList = document.getElementById("vacancyList");
+  vacancyList.innerHTML = ''; // Очищаем список вакансий
+
+  // Запрос с сортировкой по дате создания (новые вакансии первыми)
+  const q = query(collection(db, "vacancies"), orderBy("createdAt", "desc"));
+  const querySnapshot = await getDocs(q);
+
+  querySnapshot.forEach((doc) => {
+    const vacancyData = doc.data();
+    const vacancyDiv = document.createElement("div");
+    vacancyDiv.classList.add("vacancy");
+
+    // Преобразуем timestamp в удобочитаемый формат
+    const createdAt = vacancyData.createdAt.toDate();
+    const formattedDate = createdAt.toLocaleDateString() + ' ' + createdAt.toLocaleTimeString();
+
+    vacancyDiv.innerHTML = `
+      <strong>Имя:</strong> ${vacancyData.name} <br>
+      <strong>Навыки:</strong> ${vacancyData.skills} <br>
+      <strong>Опыт:</strong> ${vacancyData.experience} <br>
+      <strong>Дата добавления:</strong> ${formattedDate} <br>
+      ${vacancyData.contact ? `<button onclick="showContact('${vacancyData.contact}')">Проверить контакт</button>` : ""}
+    `;
+
+    // Проверяем, является ли пользователь администратором или создателем вакансии
+    if (auth.currentUser) {
+      if (vacancyData.createdBy === auth.currentUser.uid || auth.currentUser.email === "assasin22052007@gmail.com") {
+        vacancyDiv.innerHTML += `
+          <button onclick="editVacancy('${doc.id}', '${vacancyData.name}', '${vacancyData.skills}', '${vacancyData.experience}', '${vacancyData.contact}')">Редактировать</button>
+          <button onclick="deleteVacancy('${doc.id}')">Удалить</button>
         `;
-        
-        // Если пользователь авторизован и это его вакансия, добавляем кнопки редактирования и удаления
-        if (auth.currentUser && vacancyData.createdBy === auth.currentUser.uid) {
-          vacancyDiv.innerHTML += `
-            <button onclick="editVacancy('${doc.id}', '${vacancyData.name}', '${vacancyData.skills}', '${vacancyData.experience}', '${vacancyData.contact}')">Редактировать</button>
-            <button onclick="deleteVacancy('${doc.id}')">Удалить</button>
-          `;
-        }
-        vacancyList.appendChild(vacancyDiv);
-      });
+      }
     }
+
+    vacancyList.appendChild(vacancyDiv);
+  });
+}
 
     // Функция для редактирования вакансии
     window.editVacancy = function(id, name, skills, experience, contact) {
